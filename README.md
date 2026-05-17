@@ -1,8 +1,27 @@
 # phel-symfony-demo
 
-Minimal real Symfony app whose application layer is written in [Phel](https://phel-lang.org). Symfony stays at the edge (HTTP, DI, config). Phel owns routing, handlers, business logic. Adapter ~120 LOC.
+Minimal real Symfony app whose application layer is written in [Phel](https://phel-lang.org). Symfony stays at the edge (HTTP, DI, config). Phel owns routing, handlers, business logic. Adapter ~130 LOC.
 
 > Companion gist: <https://gist.github.com/Chemaclass/ceeed2eb4562186e0c968d5c70cb727b>
+
+## Contents
+
+- [Stack](#stack)
+- [Quickstart (60 seconds)](#quickstart-60-seconds)
+- [Make targets](#make-targets)
+- [Architecture](#architecture)
+- [Request lifecycle](#request-lifecycle) — trace one HTTP call top to bottom
+- [Layout](#layout)
+- [Where to look first](#where-to-look-first)
+- [Symfony POV → Phel cheatsheet](#symfony-pov--phel-cheatsheet)
+- [FP practices (Clojure-inspired, PHP-friendly)](#fp-practices-clojure-inspired-php-friendly)
+- [REPL-driven workflow](#repl-driven-workflow-the-biggest-mindset-shift-from-php)
+- [Use full PHP ecosystem from Phel](#use-full-php-ecosystem-from-phel)
+- [Add a new endpoint in 4 steps](#add-a-new-endpoint-in-4-steps)
+- [Test pyramid](#test-pyramid)
+- [DX gotchas](#dx-gotchas)
+- [FAQ](#faq)
+- [Further reading](#further-reading) — `docs/` deep dives
 
 ## Stack
 
@@ -38,7 +57,7 @@ curl -X POST -H 'Content-Type: application/json' \
 | GET    | /users/1    | 200 | user |
 | GET    | /users/999  | 404 | `{"error":"not found"}` |
 | POST   | /users      | 201 | created |
-| POST   | /users (invalid) | 422 | `{"error":"email and name required"}` |
+| POST   | /users (invalid) | 422 | `{"errors":{"name":"name is invalid"}}` |
 | DELETE | /users      | 405 | method not allowed |
 | GET    | /nope       | 404 | not found |
 
@@ -62,7 +81,7 @@ make lint         lint Phel entrypoint
 Symfony FrameworkBundle (kernel, DI, one catch-all route)
    |
    v
-App\Phel\PhelApp  (adapter, ~120 LOC)
+App\Phel\PhelApp  (adapter, ~130 LOC)
    |   Symfony Request -> Phel map (keyword keys)
    |   Phel response   -> Symfony JsonResponse
    v
@@ -74,6 +93,48 @@ phel.router/handler  ::  (fn [request] response)
    +- persistence (app.persistence, wraps DBAL)
    v
 SQLite via Doctrine DBAL (no ORM)
+```
+
+## Request lifecycle
+
+Concrete trace of `GET /users/1`:
+
+```
+1. nginx/php-fpm/dev-server hits public/index.php
+2. Symfony Kernel boots, matches catch-all route in PhelController
+3. PhelController::__invoke($request) calls PhelApp::handle($request)
+4. PhelApp builds the Phel request map:
+     {:method "GET"
+      :uri "/users/1"
+      :headers {...}
+      :parsed-body nil
+      :attributes {:conn <DBAL\Connection> :clock <fn>}}    <-- from app.system/build
+5. Adapter calls (phel.http/request-from-map req-map) to coerce to Phel http request
+6. Adapter calls (app.app/app request)
+     -> wrap-errors          (try/catch \Throwable)
+       -> wrap-json-response (puts content-type header)
+         -> phel.router      (matches "/users/{id}", stamps :match under :attributes)
+           -> app.handlers/show-user
+                let conn = (get-in req [:attributes :conn])
+                let id   = 1
+                let r    = (db/find-user conn 1)
+                  -> (php/-> conn (fetchAssociative ...))   <-- only PHP boundary
+                  -> {:tag :ok :user {:id 1 :email "..." :name "..."}}
+                case :tag = :ok
+                  -> {:status 200 :body {:id 1 ...}}
+7. wrap-json-response merges {"content-type" "application/json"} into headers
+8. wrap-errors passes through (no exception)
+9. Adapter reads :status, :body, :headers; runs (phel->php body)
+10. Returns Symfony JsonResponse(body, status, headers)
+11. Symfony serializes to HTTP response
+```
+
+Same path for `POST /users` with validation; the only branch is in `create-user`:
+
+```
+parsed-body -> v/validate create-user-schema
+  :tag :error -> {:status 422 :body {:errors {...}}}
+  :tag :ok    -> db/insert-user! -> db/find-user -> {:status 201 :body ...}
 ```
 
 ## Layout
@@ -241,6 +302,36 @@ These bit during build. Documented inline in the adapter too.
 4. **`(php/array ...)` is positional, not associative.** For DBAL `insert(table, data)` use `(php-associative-array "email" v "name" v)`. `(php/array "email" v ...)` produces `[0=>"email", 1=>v, ...]` → broken SQL.
 5. **Cache after edits.** Phel caches compiled PHP under `.phel/cache/`. After editing a `.phel` file: `make cache-clear`.
 6. **Don't lint whole `src/Phel/` dir.** It loads each file in isolation; transitive `:require` triggers duplicate-symbol errors. Lint the entry namespace: `make lint`.
+
+## FAQ
+
+**Q: Why not just use Symfony controllers?**
+A: You can. This demo exists because routes-as-data, persistent maps, pure handlers, and REPL-driven feedback are easier to reason about than annotated controllers + entity proxies + listener chains. You also keep Symfony underneath — DI, console, profiler, framework upgrades all work.
+
+**Q: Why not adopt Phel for everything?**
+A: Phel is great for pure logic and data shaping. PHP is great for DI wiring, ORM mappings, third-party SDKs that lean on classes/attributes, and operational tooling. Keep each at its strength; the adapter is the seam.
+
+**Q: Performance overhead?**
+A: Phel compiles to PHP at build time (cached under `.phel/cache/`). At request time it is plain PHP. The adapter cost is one map allocation per request plus a Registry lookup memoized on first call. Negligible vs DBAL/Twig.
+
+**Q: How do I migrate an existing controller incrementally?**
+A: See [`docs/MIGRATION.md`](docs/MIGRATION.md). Short version: PHP class stays as a one-line delegation; move the body into a Phel handler; add the route to `app.phel`; delete the PHP class only when no callers depend on its DI bindings.
+
+**Q: Editor / IDE support?**
+A: PHPStorm: install the [Phel plugin](https://plugins.jetbrains.com/plugin/19710-phel). VS Code: the [Phel extension](https://marketplace.visualstudio.com/items?itemName=phel-lang.phel) gives syntax + paren matching. REPL is your real "language server" — it answers questions PHPStan can't.
+
+**Q: Can I use Doctrine ORM, Twig, Messenger, etc.?**
+A: Yes — call them via `(php/-> ...)` from a boundary namespace (see [Use full PHP ecosystem from Phel](#use-full-php-ecosystem-from-phel)). Keep handlers pure; pass the services in under `:attributes` via `app.system/build`.
+
+**Q: What about types / static analysis?**
+A: Phel has runtime type predicates (`number?`, `string?`, `map?`, ...). For static analysis the demo relies on PHPStan/Psalm only on the PHP side. The Phel side is covered by REPL + tests as data.
+
+## Further reading
+
+| Doc | What's in it |
+|---|---|
+| [`docs/MIGRATION.md`](docs/MIGRATION.md) | Port a Symfony controller to a Phel handler in 5 steps, without big-bang rewrites |
+| [`docs/REPL.md`](docs/REPL.md) | REPL cookbook: inspect routes, reload ns, drive a handler with a stub system |
 
 ## License
 
