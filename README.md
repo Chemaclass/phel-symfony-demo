@@ -90,6 +90,62 @@ These tripped me up while building this demo. They are now documented inline in 
 - Symfony's profiler still works for the adapter call. Phel side use `phel profile` or REPL.
 - One adapter. ~90 lines. Migrate routes from PHP to Phel incrementally.
 
+## Thinking in Phel from a Symfony POV
+
+If you live in Symfony, you write controllers (classes), inject services, return `Response`. Phel flips the mental model:
+
+| Symfony idea | Phel equivalent |
+|---|---|
+| Controller class + method | A function `(fn [req] resp)` |
+| `Request` object | A map with keyword keys (`:method`, `:uri`, `:parsed-body`, ...) |
+| `Response` object | A map `{:status 200 :body ... :headers {...}}` |
+| Routing attributes (`#[Route]`) | A vector of `[path opts]` pairs (data) |
+| Middleware (`EventSubscriber`) | A function `(fn [handler req] ...)` wrapping the next handler |
+| Service container injection | Values placed under `:attributes` in the request map |
+| DTO / entity | A plain map. No class. No proxy. |
+| ORM repository | A namespace of functions over `conn` (DBAL stays underneath) |
+
+### The four rules of thumb
+
+1. **Stay in data.** Pass maps, not objects. Routes are data. Responses are data. Tests are data literals.
+2. **Handlers are pure.** Side effects (DB, clock, HTTP) come in as dependencies under `:attributes`. Stub at that boundary with `phel.mock/with-mocks` (see `tests/Phel/handlers_test.phel`).
+3. **Compose with functions.** Need cross-cutting behavior? Wrap the handler (`wrap-json-response`, `wrap-errors` in `app.phel`). No annotations, no listeners.
+4. **Symfony stays at the edge.** Symfony owns HTTP, DI, config. Phel owns routing, handlers, business logic. The adapter (`PhelApp.php`) translates once at each end.
+
+### Where to look first
+
+| You want to ... | Read |
+|---|---|
+| see the HTTP entry point | `src/Controller/PhelController.php` (5 lines) |
+| see the adapter (Symfony → Phel → Symfony) | `src/Phel/PhelApp.php` |
+| see how routes are declared | `src/Phel/app.phel` |
+| see a handler | `src/Phel/handlers.phel` |
+| see the DB layer | `src/Phel/persistence.phel` |
+| see pure handler tests (no HTTP) | `tests/Phel/handlers_test.phel` |
+| see full feature tests (HTTP → DB) | `tests/Controller/PhelControllerTest.php` |
+
+### Test pyramid
+
+Three levels — pick the cheapest one that proves what you care about:
+
+1. **Phel unit** (`phel test`) — call the handler with a literal map, mock `db/*`. Sub-second feedback. Best for branching logic.
+2. **PHP integration** — instantiate `PhelApp`, hand it a `Request`. Catches adapter bugs.
+3. **HTTP feature** (`phpunit` + `WebTestCase`) — boot the kernel, hit the URL, assert on JSON. Catches routing, middleware, DI wiring.
+
+### When to write PHP vs Phel
+
+- New endpoint, business logic, validation, transformation → **Phel**.
+- DI wiring, infra adapters, third-party SDK integration, framework extension points → **PHP**.
+- Migrating an existing controller? Move the *body* into a Phel handler; keep the PHP class as a one-line delegation until you delete the catch-all you don't need anymore.
+
+## Running tests
+
+```bash
+composer test          # phel cache:clear + phel test + phpunit
+vendor/bin/phel test   # Phel unit tests only
+php bin/phpunit        # HTTP feature tests only
+```
+
 ## License
 
 MIT.

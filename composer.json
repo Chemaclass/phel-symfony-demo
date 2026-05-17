@@ -58,8 +58,10 @@
         ],
         "test": [
             "@phel-cache-clear",
+            "@phel-test",
             "@phpunit"
         ],
+        "phel-test": "vendor/bin/phel test",
         "phpunit": "php bin/phpunit",
         "phel-cache-clear": "vendor/bin/phel cache:clear"
     },
