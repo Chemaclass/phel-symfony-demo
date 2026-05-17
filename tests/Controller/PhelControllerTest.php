@@ -75,7 +75,7 @@ final class PhelControllerTest extends FeatureTestCase
         );
 
         self::assertSame(Response::HTTP_UNPROCESSABLE_ENTITY, $this->client->getResponse()->getStatusCode());
-        self::assertSame(['error' => 'email and name required'], $this->jsonResponse());
+        self::assertSame(['errors' => ['name' => 'name is invalid']], $this->jsonResponse());
     }
 
     public function test_delete_users_returns_405(): void

@@ -4,9 +4,8 @@
   (:require app.handlers :as hdl)
   (:require app.persistence :as db))
 
-;; Pure handlers take a request map and return a response map.
-;; No HTTP, no Symfony, no real DB — call them with literal data.
-;; The conn object is opaque here; we mock the db/* boundary instead.
+;; Handlers take a request map and return a response map.
+;; No HTTP, no Symfony, no real DB. Stub db/* at the boundary.
 
 (def- stub-conn :fake-conn)
 
@@ -17,7 +16,7 @@
       (is (= [{:id 1 :email "a@x" :name "A"}] (get resp :body))))))
 
 (deftest show-user-returns-200-when-found
-  (with-mocks [db/find-user (mock {:id 1 :email "a@x" :name "A"})]
+  (with-mocks [db/find-user (mock {:tag :ok :user {:id 1 :email "a@x" :name "A"}})]
     (let [resp (hdl/show-user
                  {:attributes {:conn stub-conn
                                :match {:path-params {:id "1"}}}})]
@@ -25,7 +24,7 @@
       (is (= "A" (get-in resp [:body :name]))))))
 
 (deftest show-user-returns-404-when-missing
-  (with-mocks [db/find-user (mock nil)]
+  (with-mocks [db/find-user (mock {:tag :not-found})]
     (let [resp (hdl/show-user
                  {:attributes {:conn stub-conn
                                :match {:path-params {:id "999"}}}})]
@@ -33,13 +32,20 @@
       (is (= "not found" (get-in resp [:body :error]))))))
 
 (deftest create-user-rejects-missing-fields
-  (let [resp (hdl/create-user {:parsed-body {"email" "only@x"}})]
+  (let [resp (hdl/create-user {:parsed-body {"email" "only@x"}
+                               :attributes  {:conn stub-conn}})]
     (is (= 422 (get resp :status)))
-    (is (= "email and name required" (get-in resp [:body :error])))))
+    (is (contains? (get-in resp [:body :errors]) "name"))))
+
+(deftest create-user-rejects-bad-email
+  (let [resp (hdl/create-user {:parsed-body {"email" "nope" "name" "X"}
+                               :attributes  {:conn stub-conn}})]
+    (is (= 422 (get resp :status)))
+    (is (contains? (get-in resp [:body :errors]) "email"))))
 
 (deftest create-user-inserts-and-returns-201
   (with-mocks [db/insert-user! (mock 42)
-               db/find-user    (mock {:id 42 :email "g@x" :name "G"})]
+               db/find-user    (mock {:tag :ok :user {:id 42 :email "g@x" :name "G"}})]
     (let [resp (hdl/create-user
                  {:parsed-body {"email" "g@x" "name" "G"}
                   :attributes  {:conn stub-conn}})]

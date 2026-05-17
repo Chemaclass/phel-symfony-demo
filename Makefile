@@ -1,4 +1,4 @@
-.PHONY: help install serve test phel-test phpunit db-setup db-reset cache-clear lint
+.PHONY: help install serve test phel-test phpunit db-setup db-reset cache-clear lint repl
 
 PHP      ?= php
 HOST     ?= 127.0.0.1
@@ -12,6 +12,9 @@ install: ## Install deps + seed SQLite DB
 
 serve: ## Start PHP dev server on $(HOST):$(PORT)
 	$(PHP) -S $(HOST):$(PORT) -t public public/index.php
+
+repl: ## Phel REPL (require namespaces, redefine, retest)
+	vendor/bin/phel repl
 
 test: ## Run Phel + PHPUnit suites
 	composer test

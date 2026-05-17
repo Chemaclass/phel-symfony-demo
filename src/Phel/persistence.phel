@@ -1,10 +1,14 @@
 (ns app.persistence)
 
+;; PHP interop is walled off in this namespace.
+;; Returns result-tagged maps so handlers can branch on data, not exceptions.
+
 (defn find-user [conn id]
-  (or (php/-> conn (fetchAssociative
-                     "SELECT id, email, name FROM users WHERE id = ?"
-                     (php/array id)))
-      nil))
+  (if-let [row (php/-> conn (fetchAssociative
+                              "SELECT id, email, name FROM users WHERE id = ?"
+                              (php/array id)))]
+    {:tag :ok :user row}
+    {:tag :not-found}))
 
 (defn all-users [conn]
   (php/-> conn (fetchAllAssociative

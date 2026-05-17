@@ -1,0 +1,28 @@
+(ns tests.validation-test
+  (:require phel.test :refer [deftest is])
+  (:require app.validation :as v))
+
+(def- schema
+  {"email" [:required :email]
+   "name"  [:required]})
+
+(deftest valid-data-returns-ok-with-value
+  (let [r (v/validate schema {"email" "a@b" "name" "Ada"})]
+    (is (= :ok (get r :tag)))
+    (is (= {"email" "a@b" "name" "Ada"} (get r :value)))))
+
+(deftest missing-required-returns-error
+  (let [r (v/validate schema {"email" "a@b"})]
+    (is (= :error (get r :tag)))
+    (is (contains? (get r :errors) "name"))))
+
+(deftest bad-email-returns-error
+  (let [r (v/validate schema {"email" "nope" "name" "Ada"})]
+    (is (= :error (get r :tag)))
+    (is (contains? (get r :errors) "email"))))
+
+(deftest empty-string-fails-required
+  (let [r (v/validate schema {"email" "" "name" ""})]
+    (is (= :error (get r :tag)))
+    (is (contains? (get r :errors) "email"))
+    (is (contains? (get r :errors) "name"))))

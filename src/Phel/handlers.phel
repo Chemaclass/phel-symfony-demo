@@ -1,24 +1,29 @@
 (ns app.handlers
-  (:require app.persistence :as db))
+  (:require app.persistence :as db)
+  (:require app.validation :as v))
+
+(def- create-user-schema
+  {"email" [:required :email]
+   "name"  [:required]})
 
 (defn list-users [req]
-  {:status 200
-   :body   (db/all-users (get-in req [:attributes :conn]))})
+  (let [conn (get-in req [:attributes :conn])]
+    {:status 200 :body (db/all-users conn)}))
 
 (defn show-user [req]
-  (if-let [user (db/find-user (get-in req [:attributes :conn])
-                              (php/intval (get-in req [:attributes :match :path-params :id])))]
-    {:status 200 :body user}
-    {:status 404 :body {:error "not found"}}))
+  (let [conn (get-in req [:attributes :conn])
+        id   (php/intval (get-in req [:attributes :match :path-params :id]))
+        r    (db/find-user conn id)]
+    (case (get r :tag)
+      :ok        {:status 200 :body (get r :user)}
+      :not-found {:status 404 :body {:error "not found"}})))
 
 (defn create-user [req]
-  (let [json (or (get req :parsed-body) {})]
-    (if (and (get json "email") (get json "name"))
-      {:status 201
-       :body   (db/find-user
-                 (get-in req [:attributes :conn])
-                 (db/insert-user! (get-in req [:attributes :conn])
-                                  (get json "email")
-                                  (get json "name")))}
-      {:status 422
-       :body   {:error "email and name required"}})))
+  (let [conn (get-in req [:attributes :conn])
+        r    (v/validate create-user-schema (or (get req :parsed-body) {}))]
+    (case (get r :tag)
+      :error {:status 422 :body {:errors (get r :errors)}}
+      :ok    (let [data  (get r :value)
+                   id    (db/insert-user! conn (get data "email") (get data "name"))
+                   found (db/find-user conn id)]
+               {:status 201 :body (get found :user)}))))

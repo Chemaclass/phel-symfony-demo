@@ -1,0 +1,29 @@
+(ns app.validation)
+
+;; Validation as data. Schema is a map of field-name -> [rules...].
+;; Returns a result-tagged map: {:tag :ok :value m} | {:tag :error :errors {...}}.
+
+(defn- check [value rule]
+  (case rule
+    :required (and (some? value)
+                   (not (and (string? value) (= "" value))))
+    :email    (and (string? value)
+                   (= 1 (php/preg_match "/.+@.+/" value)))
+    true))
+
+(defn- field-error [field rules value]
+  (when-not (every? (fn [r] (check value r)) rules)
+    (str field " is invalid")))
+
+(defn validate [schema data]
+  (let [errors (reduce
+                 (fn [acc pair]
+                   (let [field (first pair)
+                         rules (second pair)
+                         err   (field-error field rules (get data field))]
+                     (if err (put acc field err) acc)))
+                 {}
+                 (pairs schema))]
+    (if (empty? errors)
+      {:tag :ok :value data}
+      {:tag :error :errors errors})))

@@ -47,6 +47,7 @@ curl -X POST -H 'Content-Type: application/json' \
 ```
 make install      composer install + seed DB
 make serve        PHP dev server on 127.0.0.1:8765
+make repl         Phel REPL (require namespaces, redefine, retest)
 make test         phel test + phpunit
 make phel-test    Phel unit tests
 make phpunit      HTTP feature tests
@@ -85,8 +86,10 @@ src/
   Phel/
     PhelApp.php                   Adapter: Request <-> Phel map / response
     app.phel                      Root: router + middleware = handler
+    system.phel                   Builds the system map (conn, clock, ...)
     handlers.phel                 Pure request -> response fns
-    persistence.phel              DBAL wrapper, returns plain maps
+    validation.phel               Schema-as-data validation
+    persistence.phel              DBAL wrapper, returns result-tagged maps
 bin/db-setup.php                  SQLite seed script (idempotent; --reset)
 ```
 
@@ -97,9 +100,12 @@ bin/db-setup.php                  SQLite seed script (idempotent; --reset)
 | HTTP entry point          | `src/Controller/PhelController.php` (5 lines) |
 | Adapter (Symfony↔Phel)    | `src/Phel/PhelApp.php` |
 | Routes                    | `src/Phel/app.phel` |
+| System wiring             | `src/Phel/system.phel` |
 | A handler                 | `src/Phel/handlers.phel` |
-| DB layer                  | `src/Phel/persistence.phel` |
+| Validation (schema=data)  | `src/Phel/validation.phel` |
+| DB layer (result-tagged)  | `src/Phel/persistence.phel` |
 | Pure handler tests        | `tests/Phel/handlers_test.phel` |
+| Pure validation tests     | `tests/Phel/validation_test.phel` |
 | HTTP feature tests        | `tests/Controller/PhelControllerTest.php` |
 
 ## Symfony POV → Phel cheatsheet
@@ -128,13 +134,74 @@ bin/db-setup.php                  SQLite seed script (idempotent; --reset)
 - DI wiring, infra adapters, third-party SDK, framework extension points → **PHP**
 - Migrating an existing controller? Move the *body* into a Phel handler; keep the PHP class as a one-line delegation.
 
+## FP practices (Clojure-inspired, PHP-friendly)
+
+This demo aims to give PHP devs Clojure-style code without giving up the PHP ecosystem.
+
+| Practice | Where in demo | Why it matters |
+|---|---|---|
+| **Functional core, imperative shell** | `handlers.phel` pure; `PhelApp.php` shell | edge does I/O; core is testable in isolation |
+| **Data > functions > macros** | routes, schema, system map are data | diffable, inspectable, no DSL to learn |
+| **Persistent maps over DTOs/entities** | `db/all-users` returns maps | no proxy, no hydration, no class explosion |
+| **Repository = namespace of fns** | `app.persistence` over `conn` | no `interface SomethingRepository` ceremony |
+| **Result-tagged returns over exceptions** | `find-user` → `{:tag :ok :user m}` / `{:tag :not-found}` | branch on data with `case`; exceptions only at edge |
+| **Side-effecting fns suffixed `!`** | `insert-user!` | reading the call site tells you what mutates |
+| **System map (component-lite)** | `app.system/build` | one place wires `conn`, `clock`, future deps; stub with literal map |
+| **Schema-as-data validation** | `app.validation` + `create-user-schema` | rules are data; composable; testable as literals |
+| **PHP interop walled off** | only `*.persistence`, `*.system`, `PhelApp.php` touch PHP objects | core stays portable; grep `php/` in `handlers.phel` should return 0 |
+| **Threading macros** | `wrap-json-response` uses `->` | linear pipelines beat nested calls |
+
+### REPL-driven workflow (the biggest mindset shift from PHP)
+
+PHP devs reach for re-run. Clojure devs reach for the REPL.
+
+```bash
+make repl
+```
+
+```clojure
+(require 'app.handlers :as hdl)
+(require 'app.validation :as v)
+
+;; call a handler with literal data — no HTTP, no Symfony
+(hdl/list-users {:attributes {:conn :stub}})
+
+;; iterate on validation rules live
+(v/validate {"email" [:required :email]} {"email" "x"})
+;; => {:tag :error :errors {"email" "email is invalid"}}
+```
+
+Edit a fn, `(require ... :reload)`, retry in the same session. No boot, no curl, no kernel cache clear.
+
+### Use full PHP ecosystem from Phel
+
+Phel ↔ PHP interop is two operators:
+
+- `(php/-> obj (method args...))` — instance method call
+- `(php/:: Class staticMethod ...)`, `(php/new Class ...)` — class access
+
+So any Composer package works:
+
+```clojure
+;; Doctrine DBAL
+(php/-> conn (fetchAssociative "SELECT ..." (php/array id)))
+
+;; Symfony Messenger (assume injected under :attributes)
+(php/-> (get-in req [:attributes :bus]) (dispatch (php/new App\Message\SendEmail to subject)))
+
+;; any PSR-15 handler, Symfony EventDispatcher, Doctrine ORM, Twig — all callable
+```
+
+Rule: keep these calls in the **boundary namespace** (`*.persistence`, `*.io.mailer`, etc.). Handlers stay pure and stub-friendly.
+
 ## Add a new endpoint in 4 steps
 
-1. **Handler** in `src/Phel/handlers.phel`:
+1. **Handler** in `src/Phel/handlers.phel` (read `clock` from system map, not direct PHP):
 
    ```clojure
    (defn ping [req]
-     {:status 200 :body {:pong (php/time)}})
+     (let [now ((get-in req [:attributes :clock]))]
+       {:status 200 :body {:pong now}}))
    ```
 
 2. **Route** in `src/Phel/app.phel`:
@@ -143,14 +210,18 @@ bin/db-setup.php                  SQLite seed script (idempotent; --reset)
    ["/ping" {:get {:handler app.handlers/ping}}]
    ```
 
-3. **Test** in `tests/Phel/handlers_test.phel`:
+3. **Test** in `tests/Phel/handlers_test.phel` (stub `:clock` with a literal fn):
 
    ```clojure
    (deftest ping-returns-200
-     (is (= 200 (get (hdl/ping {}) :status))))
+     (let [resp (hdl/ping {:attributes {:clock (fn [] 1234567)}})]
+       (is (= 200 (get resp :status)))
+       (is (= 1234567 (get-in resp [:body :pong])))))
    ```
 
 4. `make cache-clear && make test`. Done.
+
+> Need input validation? Define a schema map in the handler ns and call `(v/validate schema (get req :parsed-body))`. See `create-user` for the pattern.
 
 ## Test pyramid
 

@@ -1,5 +1,6 @@
 (ns app.app
   (:require phel.router :as r)
+  (:require app.system)
   (:require app.handlers))
 
 (defn- wrap-json-response [handler request]

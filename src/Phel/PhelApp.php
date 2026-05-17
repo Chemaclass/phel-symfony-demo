@@ -16,6 +16,7 @@ final class PhelApp
 {
     private static bool $booted = false;
     private mixed $rootHandler = null;
+    private mixed $systemBuilder = null;
     private mixed $coreGet = null;
     private mixed $phelToPhp = null;
 
@@ -38,9 +39,7 @@ final class PhelApp
             \Phel::keyword('server-params'),  $request->server->all(),
             \Phel::keyword('uploaded-files'), [],
             \Phel::keyword('version'),        '1.1',
-            \Phel::keyword('attributes'),     \Phel::map(
-                \Phel::keyword('conn'), $this->conn,
-            ),
+            \Phel::keyword('attributes'),     $this->systemMap(),
         );
 
         $resp = $handler($reqMap);
@@ -79,6 +78,18 @@ final class PhelApp
         }
 
         return $this->rootHandler = static fn (mixed $reqMap) => $rootApp($reqFromMap($reqMap));
+    }
+
+    private function systemMap(): mixed
+    {
+        if ($this->systemBuilder === null) {
+            $build = Registry::getInstance()->getDefinition('app.system', 'build');
+            if (!is_callable($build)) {
+                throw new RuntimeException('app.system/build not found');
+            }
+            $this->systemBuilder = $build;
+        }
+        return ($this->systemBuilder)($this->conn);
     }
 
     private function coreGet(): callable

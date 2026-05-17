@@ -1,0 +1,9 @@
+(ns app.system)
+
+;; System map: the only place we wire side-effecting deps.
+;; Handlers receive this under :attributes. To stub in tests, pass
+;; a literal map with the same keys (any fake values).
+
+(defn build [conn]
+  {:conn  conn
+   :clock (fn [] (php/time))})
