@@ -1,8 +1,8 @@
-(ns tests\handlers-test
-  (:require phel\test :refer [deftest is])
-  (:require phel\mock :refer [with-mocks mock])
-  (:require app\handlers :as hdl)
-  (:require app\persistence :as db))
+(ns tests.handlers-test
+  (:require phel.test :refer [deftest is])
+  (:require phel.mock :refer [with-mocks mock])
+  (:require app.handlers :as hdl)
+  (:require app.persistence :as db))
 
 ;; Pure handlers take a request map and return a response map.
 ;; No HTTP, no Symfony, no real DB — call them with literal data.
