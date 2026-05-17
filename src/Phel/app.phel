@@ -1,0 +1,23 @@
+(ns app.app
+  (:require phel.router :as r)
+  (:require app.handlers))
+
+(defn- wrap-json-response [handler request]
+  (let [resp (handler request)]
+    (-> resp
+        (put :headers (merge (or (get resp :headers) {})
+                             {"content-type" "application/json"})))))
+
+(defn- wrap-errors [handler request]
+  (try
+    (handler request)
+    (catch \Throwable e
+      {:status 500 :body {:error (php/-> e (getMessage))}})))
+
+(def app
+  (r/handler
+    (r/router
+      [["/users"        {:get  {:handler app.handlers/list-users}
+                         :post {:handler app.handlers/create-user}}]
+       ["/users/{id}"   {:get  {:handler app.handlers/show-user}}]])
+    {:middleware [wrap-errors wrap-json-response]}))

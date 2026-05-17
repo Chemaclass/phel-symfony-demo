@@ -1,0 +1,15 @@
+(ns app.persistence)
+
+(defn find-user [conn id]
+  (or (php/-> conn (fetchAssociative
+                     "SELECT id, email, name FROM users WHERE id = ?"
+                     (php/array id)))
+      nil))
+
+(defn all-users [conn]
+  (php/-> conn (fetchAllAssociative
+                 "SELECT id, email, name FROM users ORDER BY id")))
+
+(defn insert-user! [conn email name]
+  (php/-> conn (insert "users" (php-associative-array "email" email "name" name)))
+  (php/intval (php/-> conn (lastInsertId))))

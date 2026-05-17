@@ -1,0 +1,24 @@
+(ns app.handlers
+  (:require app.persistence :as db))
+
+(defn list-users [req]
+  {:status 200
+   :body   (db/all-users (get-in req [:attributes :conn]))})
+
+(defn show-user [req]
+  (if-let [user (db/find-user (get-in req [:attributes :conn])
+                              (php/intval (get-in req [:attributes :match :path-params :id])))]
+    {:status 200 :body user}
+    {:status 404 :body {:error "not found"}}))
+
+(defn create-user [req]
+  (let [json (or (get req :parsed-body) {})]
+    (if (and (get json "email") (get json "name"))
+      {:status 201
+       :body   (db/find-user
+                 (get-in req [:attributes :conn])
+                 (db/insert-user! (get-in req [:attributes :conn])
+                                  (get json "email")
+                                  (get json "name")))}
+      {:status 422
+       :body   {:error "email and name required"}})))
