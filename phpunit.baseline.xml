@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<files version="1">
+ <file path="vendor/phel-lang/phel-lang/src/php/Compiler/Application/Lexer.php">
+  <line number="128" hash="1dde2708d24275c300f1a3b0ef40b658a618b2ed">
+   <issue><![CDATA[Using "|()" for short functions is deprecated, use "#()" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/router.phel:19:10)]]></issue>
+   <issue><![CDATA[Using "|()" for short functions is deprecated, use "#()" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/router.phel:225:51)]]></issue>
+  </line>
+  <line number="142" hash="1dde2708d24275c300f1a3b0ef40b658a618b2ed">
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/core/arrays.phel:227:21)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/core/arrays.phel:227:26)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/core/arrays.phel:227:31)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/core/arrays.phel:227:37)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/core/arrays.phel:233:26)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/core/arrays.phel:233:31)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/core/arrays.phel:233:43)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/core/arrays.phel:233:49)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/router.phel:253:11)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/router.phel:255:8)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/router.phel:256:71)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/router.phel:256:96)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/router.phel:257:102)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/router.phel:257:75)]]></issue>
+   <issue><![CDATA[Using "," for unquote is deprecated, use "~" instead (at /Users/chema/Code/Chemaclass/phel-symfony-demo/vendor/phel-lang/phel-lang/src/phel/router.phel:258:8)]]></issue>
+  </line>
+ </file>
+</files>
