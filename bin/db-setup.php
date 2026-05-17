@@ -7,8 +7,16 @@ require __DIR__ . '/../vendor/autoload.php';
 use Doctrine\DBAL\DriverManager;
 
 $dbPath = __DIR__ . '/../var/data.sqlite';
-@unlink($dbPath);
+$reset  = in_array('--reset', $argv, true);
+
 @mkdir(dirname($dbPath), 0775, true);
+
+if (file_exists($dbPath) && !$reset) {
+    echo "DB exists at {$dbPath}. Use --reset to recreate.\n";
+    exit(0);
+}
+
+@unlink($dbPath);
 
 $conn = DriverManager::getConnection([
     'driver' => 'pdo_sqlite',

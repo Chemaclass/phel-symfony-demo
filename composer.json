@@ -51,7 +51,8 @@
             "assets:install %PUBLIC_DIR%": "symfony-cmd"
         },
         "post-install-cmd": [
-            "@auto-scripts"
+            "@auto-scripts",
+            "@db-setup"
         ],
         "post-update-cmd": [
             "@auto-scripts"
@@ -63,7 +64,9 @@
         ],
         "phel-test": "vendor/bin/phel test",
         "phpunit": "php bin/phpunit",
-        "phel-cache-clear": "vendor/bin/phel cache:clear"
+        "phel-cache-clear": "vendor/bin/phel cache:clear",
+        "db-setup": "php bin/db-setup.php",
+        "db-reset": "php bin/db-setup.php --reset"
     },
     "conflict": {
         "symfony/symfony": "*"
