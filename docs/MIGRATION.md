@@ -104,7 +104,7 @@ Better — push the PHP interop into a boundary namespace:
 
 The handler is now testable with a literal `{:tag :ok :order ...}`.
 
-### 3. Add the route to `app.phel`
+### 3. Add the route to `main.phel`
 
 ```clojure
 ["/orders/{id}" {:get {:handler app.handlers/show-order}}]

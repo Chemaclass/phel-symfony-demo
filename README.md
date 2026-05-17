@@ -110,7 +110,7 @@ Concrete trace of `GET /users/1`:
       :parsed-body nil
       :attributes {:conn <DBAL\Connection> :clock <fn>}}    <-- from app.system/build
 5. Adapter calls (phel.http/request-from-map req-map) to coerce to Phel http request
-6. Adapter calls (app.app/app request)
+6. Adapter calls (app.main/app request)
      -> wrap-errors          (try/catch \Throwable)
        -> wrap-json-response (puts content-type header)
          -> phel.router      (matches "/users/{id}", stamps :match under :attributes)
@@ -146,7 +146,7 @@ src/
   Controller/PhelController.php   Catch-all route, delegates to PhelApp
   Phel/
     PhelApp.php                   Adapter: Request <-> Phel map / response
-    app.phel                      Root: router + middleware = handler
+    main.phel                     Entry ns app.main: router + middleware = handler
     system.phel                   Builds the system map (conn, clock, ...)
     handlers.phel                 Pure request -> response fns
     validation.phel               Schema-as-data validation
@@ -160,7 +160,7 @@ bin/db-setup.php                  SQLite seed script (idempotent; --reset)
 |---|---|
 | HTTP entry point          | `src/Controller/PhelController.php` (5 lines) |
 | Adapter (Symfony↔Phel)    | `src/Phel/PhelApp.php` |
-| Routes                    | `src/Phel/app.phel` |
+| Routes                    | `src/Phel/main.phel` |
 | System wiring             | `src/Phel/system.phel` |
 | A handler                 | `src/Phel/handlers.phel` |
 | Validation (schema=data)  | `src/Phel/validation.phel` |
@@ -265,7 +265,7 @@ Rule: keep these calls in the **boundary namespace** (`*.persistence`, `*.io.mai
        {:status 200 :body {:pong now}}))
    ```
 
-2. **Route** in `src/Phel/app.phel`:
+2. **Route** in `src/Phel/main.phel`:
 
    ```clojure
    ["/ping" {:get {:handler app.handlers/ping}}]
@@ -315,7 +315,7 @@ A: Phel is great for pure logic and data shaping. PHP is great for DI wiring, OR
 A: Phel compiles to PHP at build time (cached under `.phel/cache/`). At request time it is plain PHP. The adapter cost is one map allocation per request plus a Registry lookup memoized on first call. Negligible vs DBAL/Twig.
 
 **Q: How do I migrate an existing controller incrementally?**
-A: See [`docs/MIGRATION.md`](docs/MIGRATION.md). Short version: PHP class stays as a one-line delegation; move the body into a Phel handler; add the route to `app.phel`; delete the PHP class only when no callers depend on its DI bindings.
+A: See [`docs/MIGRATION.md`](docs/MIGRATION.md). Short version: PHP class stays as a one-line delegation; move the body into a Phel handler; add the route to `main.phel`; delete the PHP class only when no callers depend on its DI bindings.
 
 **Q: Editor / IDE support?**
 A: PHPStorm: install the [Phel plugin](https://plugins.jetbrains.com/plugin/19710-phel). VS Code: the [Phel extension](https://marketplace.visualstudio.com/items?itemName=phel-lang.phel) gives syntax + paren matching. REPL is your real "language server" — it answers questions PHPStan can't.

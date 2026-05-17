@@ -59,8 +59,8 @@ Retry the same expression. No process restart.
 ## Inspect the route table
 
 ```clojure
-(require 'app.app)
-app.app/app
+(require 'app.main)
+app.main/app
 ;; => the compiled handler fn
 
 ;; The routes are a literal — read them as data:

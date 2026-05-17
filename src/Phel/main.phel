@@ -1,4 +1,4 @@
-(ns app.app
+(ns app.main
   (:require phel.router :as r)
   (:require app.system)
   (:require app.handlers))

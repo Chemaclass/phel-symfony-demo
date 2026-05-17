@@ -8,4 +8,4 @@ use Phel\Config\ProjectLayout;
 return PhelConfig::forProject(ProjectLayout::Nested)
     ->withSrcDirs(['src/Phel'])
     ->withTestDirs(['tests/Phel'])
-    ->withMainPhelNamespace('app.app');
+    ->withMainPhelNamespace('app.main');

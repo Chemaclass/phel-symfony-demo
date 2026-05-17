@@ -65,13 +65,13 @@ final class PhelApp
         }
         if (!self::$booted) {
             Phel::bootstrap($this->projectRoot);
-            Phel::run($this->projectRoot, 'app.app');
+            Phel::run($this->projectRoot, 'app.main');
             self::$booted = true;
         }
 
         $registry   = Registry::getInstance();
         $reqFromMap = $registry->getDefinition('phel.http', 'request-from-map');
-        $rootApp    = $registry->getDefinition('app.app', 'app');
+        $rootApp    = $registry->getDefinition('app.main', 'app');
 
         if (!is_callable($reqFromMap) || !is_callable($rootApp)) {
             throw new RuntimeException('Phel root handler or request-from-map not found');
