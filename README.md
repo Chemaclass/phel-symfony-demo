@@ -27,8 +27,8 @@ Minimal real Symfony app whose application layer is written in [Phel](https://ph
 
 | Component | Version | Why |
 |---|---|---|
-| PHP        | `>=8.4`        | matches Phel's minimum |
-| Phel       | `^0.38`        | latest stable |
+| PHP        | `>=8.5`        | matches Phel's minimum |
+| Phel       | `^0.54`        | latest stable |
 | Symfony    | `7.4.*` (LTS)  | 3-year support window |
 | Doctrine DBAL | `^4`        | DB without an ORM |
 | PHPUnit    | `^13`          | feature tests |
@@ -72,7 +72,7 @@ make phel-test    Phel unit tests
 make phpunit      HTTP feature tests
 make db-reset     drop and recreate SQLite
 make cache-clear  clear Phel + Symfony caches
-make lint         lint Phel entrypoint
+make lint         lint Phel sources and tests
 ```
 
 ## Architecture
@@ -111,14 +111,14 @@ Concrete trace of `GET /users/1`:
       :attributes {:conn <DBAL\Connection> :clock <fn>}}    <-- from app.system/build
 5. Adapter calls (phel.http/request-from-map req-map) to coerce to Phel http request
 6. Adapter calls (app.main/app request)
-     -> wrap-errors          (try/catch \Throwable)
+     -> wrap-errors          (try/catch Throwable)
        -> wrap-json-response (puts content-type header)
          -> phel.router      (matches "/users/{id}", stamps :match under :attributes)
            -> app.handlers/show-user
                 let conn = (get-in req [:attributes :conn])
                 let id   = 1
                 let r    = (db/find-user conn 1)
-                  -> (php/-> conn (fetchAssociative ...))   <-- only PHP boundary
+                  -> (.fetchAssociative conn ...)          <-- only PHP boundary
                   -> {:tag :ok :user {:id 1 :email "..." :name "..."}}
                 case :tag = :ok
                   -> {:status 200 :body {:id 1 ...}}
@@ -236,19 +236,19 @@ Edit a fn, `(require ... :reload)`, retry in the same session. No boot, no curl,
 
 ### Use full PHP ecosystem from Phel
 
-Phel ↔ PHP interop is two operators:
+Phel ↔ PHP interop uses the Clojure-style forms:
 
-- `(php/-> obj (method args...))` — instance method call
-- `(php/:: Class staticMethod ...)`, `(php/new Class ...)` — class access
+- `(.method obj args...)`: instance method call; `(.-prop obj)`: property read
+- `(Class/staticMethod args...)`, `(Class. args...)`: static call, constructor
 
 So any Composer package works:
 
 ```clojure
 ;; Doctrine DBAL
-(php/-> conn (fetchAssociative "SELECT ..." (php/array id)))
+(.fetchAssociative conn "SELECT ..." (php/array id))
 
 ;; Symfony Messenger (assume injected under :attributes)
-(php/-> (get-in req [:attributes :bus]) (dispatch (php/new App\Message\SendEmail to subject)))
+(.dispatch (get-in req [:attributes :bus]) (App.Message.SendEmail. to subject))
 
 ;; any PSR-15 handler, Symfony EventDispatcher, Doctrine ORM, Twig — all callable
 ```
@@ -268,7 +268,7 @@ Rule: keep these calls in the **boundary namespace** (`*.persistence`, `*.io.mai
 2. **Route** in `src/Phel/main.phel`:
 
    ```clojure
-   ["/ping" {:get {:handler app.handlers/ping}}]
+   ["/ping" {:get {:handler h/ping}}]
    ```
 
 3. **Test** in `tests/Phel/handlers_test.phel` (stub `:clock` with a literal fn):
@@ -296,12 +296,11 @@ Three levels — pick the cheapest one that proves what you care about:
 
 These bit during build. Documented inline in the adapter too.
 
-1. **Two `Phel` classes.** `\Phel` (root ns, `vendor/.../src/Phel.php`) exposes helpers like `\Phel::map(...)`, `\Phel::keyword(...)`. `\Phel\Phel` (`src/php/Phel.php`) is the bootstrap entry (`Phel::bootstrap`, `Phel::run`).
+1. **Use the root `\Phel` class.** `\Phel` (`vendor/.../src/Phel.php`) is the public runtime API: `\Phel::bootstrap(...)`, `\Phel::run(...)`, `\Phel::map(...)`, `\Phel::keyword(...)`. `\Phel\Phel` (`src/php/Phel.php`) is its internal base class; do not import it.
 2. **Phel maps are not `JsonSerializable`.** Call `(phel->php data)` before handing to `JsonResponse`, else `json_encode` returns `{}` or throws. Adapter resolves `phel.core/phel->php` once at boot.
 3. **PHP assoc array != Phel keyword-keyed map.** `phel.http/request-from-map` destructures by `Keyword` keys — building the envelope with `['method' => ...]` silently breaks. Use `\Phel::map(\Phel::keyword('method'), ..., ...)`.
 4. **`(php/array ...)` is positional, not associative.** For DBAL `insert(table, data)` use `(php-associative-array "email" v "name" v)`. `(php/array "email" v ...)` produces `[0=>"email", 1=>v, ...]` → broken SQL.
 5. **Cache after edits.** Phel caches compiled PHP under `.phel/cache/`. After editing a `.phel` file: `make cache-clear`.
-6. **Don't lint whole `src/Phel/` dir.** It loads each file in isolation; transitive `:require` triggers duplicate-symbol errors. Lint the entry namespace: `make lint`.
 
 ## FAQ
 
@@ -321,7 +320,7 @@ A: See [`docs/MIGRATION.md`](docs/MIGRATION.md). Short version: PHP class stays 
 A: PHPStorm: install the [Phel plugin](https://plugins.jetbrains.com/plugin/19710-phel). VS Code: the [Phel extension](https://marketplace.visualstudio.com/items?itemName=phel-lang.phel) gives syntax + paren matching. REPL is your real "language server" — it answers questions PHPStan can't.
 
 **Q: Can I use Doctrine ORM, Twig, Messenger, etc.?**
-A: Yes — call them via `(php/-> ...)` from a boundary namespace (see [Use full PHP ecosystem from Phel](#use-full-php-ecosystem-from-phel)). Keep handlers pure; pass the services in under `:attributes` via `app.system/build`.
+A: Yes — call them via `(.method obj ...)` from a boundary namespace (see [Use full PHP ecosystem from Phel](#use-full-php-ecosystem-from-phel)). Keep handlers pure; pass the services in under `:attributes` via `app.system/build`.
 
 **Q: What about types / static analysis?**
 A: Phel has runtime type predicates (`number?`, `string?`, `map?`, ...). For static analysis the demo relies on PHPStan/Psalm only on the PHP side. The Phel side is covered by REPL + tests as data.

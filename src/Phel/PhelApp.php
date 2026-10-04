@@ -6,7 +6,6 @@ namespace App\Phel;
 
 use Doctrine\DBAL\Connection;
 use Phel\Lang\Registry;
-use Phel\Phel;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -64,8 +63,8 @@ final class PhelApp
             return $this->rootHandler;
         }
         if (!self::$booted) {
-            Phel::bootstrap($this->projectRoot);
-            Phel::run($this->projectRoot, 'app.main');
+            \Phel::bootstrap($this->projectRoot);
+            \Phel::run($this->projectRoot, 'app.main');
             self::$booted = true;
         }
 

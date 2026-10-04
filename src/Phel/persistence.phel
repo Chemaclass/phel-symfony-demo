@@ -4,16 +4,15 @@
 ;; Returns result-tagged maps so handlers can branch on data, not exceptions.
 
 (defn find-user [conn id]
-  (if-let [row (php/-> conn (fetchAssociative
-                              "SELECT id, email, name FROM users WHERE id = ?"
-                              (php/array id)))]
+  (if-let [row (.fetchAssociative conn
+                                  "SELECT id, email, name FROM users WHERE id = ?"
+                                  (php/array id))]
     {:tag :ok :user row}
     {:tag :not-found}))
 
 (defn all-users [conn]
-  (php/-> conn (fetchAllAssociative
-                 "SELECT id, email, name FROM users ORDER BY id")))
+  (.fetchAllAssociative conn "SELECT id, email, name FROM users ORDER BY id"))
 
-(defn insert-user! [conn email name]
-  (php/-> conn (insert "users" (php-associative-array "email" email "name" name)))
-  (php/intval (php/-> conn (lastInsertId))))
+(defn insert-user! [conn email user-name]
+  (.insert conn "users" (php-associative-array "email" email "name" user-name))
+  (php/intval (.lastInsertId conn)))

@@ -1,0 +1,2 @@
+;; app.main requires app.system only to load it: PhelApp reads app.system/build from the registry.
+{:exclude {:phel/unused-require ["app.main"]}}
