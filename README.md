@@ -268,7 +268,7 @@ Rule: keep these calls in the **boundary namespace** (`*.persistence`, `*.io.mai
 2. **Route** in `src/Phel/main.phel`:
 
    ```clojure
-   ["/ping" {:get {:handler app.handlers/ping}}]
+   ["/ping" {:get {:handler h/ping}}]
    ```
 
 3. **Test** in `tests/Phel/handlers_test.phel` (stub `:clock` with a literal fn):

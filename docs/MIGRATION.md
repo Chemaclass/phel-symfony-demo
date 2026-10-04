@@ -107,7 +107,7 @@ The handler is now testable with a literal `{:tag :ok :order ...}`.
 ### 3. Add the route to `main.phel`
 
 ```clojure
-["/orders/{id}" {:get {:handler app.handlers/show-order}}]
+["/orders/{id}" {:get {:handler h/show-order}}]
 ```
 
 ### 4. Shrink the PHP controller to a one-line delegation

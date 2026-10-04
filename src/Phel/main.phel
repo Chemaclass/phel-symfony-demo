@@ -1,7 +1,7 @@
 (ns app.main
   (:require phel.router :as r)
   (:require app.system)
-  (:require app.handlers))
+  (:require app.handlers :as h))
 
 (defn- wrap-json-response [handler request]
   (let [resp (handler request)]
@@ -18,7 +18,7 @@
 (def app
   (r/handler
     (r/router
-      [["/users"        {:get  {:handler app.handlers/list-users}
-                         :post {:handler app.handlers/create-user}}]
-       ["/users/{id}"   {:get  {:handler app.handlers/show-user}}]])
+      [["/users"        {:get  {:handler h/list-users}
+                         :post {:handler h/create-user}}]
+       ["/users/{id}"   {:get  {:handler h/show-user}}]])
     {:middleware [wrap-errors wrap-json-response]}))

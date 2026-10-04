@@ -13,6 +13,6 @@
 (defn all-users [conn]
   (.fetchAllAssociative conn "SELECT id, email, name FROM users ORDER BY id"))
 
-(defn insert-user! [conn email name]
-  (.insert conn "users" (php-associative-array "email" email "name" name))
+(defn insert-user! [conn email user-name]
+  (.insert conn "users" (php-associative-array "email" email "name" user-name))
   (php/intval (.lastInsertId conn)))
