@@ -296,7 +296,7 @@ Three levels — pick the cheapest one that proves what you care about:
 
 These bit during build. Documented inline in the adapter too.
 
-1. **Two `Phel` classes.** `\Phel` (root ns, `vendor/.../src/Phel.php`) exposes helpers like `\Phel::map(...)`, `\Phel::keyword(...)`. `\Phel\Phel` (`src/php/Phel.php`) is the bootstrap entry (`Phel::bootstrap`, `Phel::run`).
+1. **Use the root `\Phel` class.** `\Phel` (`vendor/.../src/Phel.php`) is the public runtime API: `\Phel::bootstrap(...)`, `\Phel::run(...)`, `\Phel::map(...)`, `\Phel::keyword(...)`. `\Phel\Phel` (`src/php/Phel.php`) is its internal base class; do not import it.
 2. **Phel maps are not `JsonSerializable`.** Call `(phel->php data)` before handing to `JsonResponse`, else `json_encode` returns `{}` or throws. Adapter resolves `phel.core/phel->php` once at boot.
 3. **PHP assoc array != Phel keyword-keyed map.** `phel.http/request-from-map` destructures by `Keyword` keys — building the envelope with `['method' => ...]` silently breaks. Use `\Phel::map(\Phel::keyword('method'), ..., ...)`.
 4. **`(php/array ...)` is positional, not associative.** For DBAL `insert(table, data)` use `(php-associative-array "email" v "name" v)`. `(php/array "email" v ...)` produces `[0=>"email", 1=>v, ...]` → broken SQL.
