@@ -35,5 +35,5 @@ cache-clear: ## Clear Phel + Symfony caches
 	composer phel-cache-clear
 	$(PHP) bin/console cache:clear
 
-lint: ## Lint Phel entrypoint (avoid linting whole src/Phel dir)
-	vendor/bin/phel lint src/Phel/main.phel
+lint: ## Lint Phel sources and tests
+	vendor/bin/phel lint src/Phel tests/Phel

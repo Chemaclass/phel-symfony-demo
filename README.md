@@ -72,7 +72,7 @@ make phel-test    Phel unit tests
 make phpunit      HTTP feature tests
 make db-reset     drop and recreate SQLite
 make cache-clear  clear Phel + Symfony caches
-make lint         lint Phel entrypoint
+make lint         lint Phel sources and tests
 ```
 
 ## Architecture
@@ -301,7 +301,6 @@ These bit during build. Documented inline in the adapter too.
 3. **PHP assoc array != Phel keyword-keyed map.** `phel.http/request-from-map` destructures by `Keyword` keys — building the envelope with `['method' => ...]` silently breaks. Use `\Phel::map(\Phel::keyword('method'), ..., ...)`.
 4. **`(php/array ...)` is positional, not associative.** For DBAL `insert(table, data)` use `(php-associative-array "email" v "name" v)`. `(php/array "email" v ...)` produces `[0=>"email", 1=>v, ...]` → broken SQL.
 5. **Cache after edits.** Phel caches compiled PHP under `.phel/cache/`. After editing a `.phel` file: `make cache-clear`.
-6. **Don't lint whole `src/Phel/` dir.** It loads each file in isolation; transitive `:require` triggers duplicate-symbol errors. Lint the entry namespace: `make lint`.
 
 ## FAQ
 
