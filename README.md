@@ -111,14 +111,14 @@ Concrete trace of `GET /users/1`:
       :attributes {:conn <DBAL\Connection> :clock <fn>}}    <-- from app.system/build
 5. Adapter calls (phel.http/request-from-map req-map) to coerce to Phel http request
 6. Adapter calls (app.main/app request)
-     -> wrap-errors          (try/catch \Throwable)
+     -> wrap-errors          (try/catch Throwable)
        -> wrap-json-response (puts content-type header)
          -> phel.router      (matches "/users/{id}", stamps :match under :attributes)
            -> app.handlers/show-user
                 let conn = (get-in req [:attributes :conn])
                 let id   = 1
                 let r    = (db/find-user conn 1)
-                  -> (php/-> conn (fetchAssociative ...))   <-- only PHP boundary
+                  -> (.fetchAssociative conn ...)          <-- only PHP boundary
                   -> {:tag :ok :user {:id 1 :email "..." :name "..."}}
                 case :tag = :ok
                   -> {:status 200 :body {:id 1 ...}}
@@ -236,19 +236,19 @@ Edit a fn, `(require ... :reload)`, retry in the same session. No boot, no curl,
 
 ### Use full PHP ecosystem from Phel
 
-Phel ↔ PHP interop is two operators:
+Phel ↔ PHP interop uses the Clojure-style forms:
 
-- `(php/-> obj (method args...))` — instance method call
-- `(php/:: Class staticMethod ...)`, `(php/new Class ...)` — class access
+- `(.method obj args...)`: instance method call; `(.-prop obj)`: property read
+- `(Class/staticMethod args...)`, `(Class. args...)`: static call, constructor
 
 So any Composer package works:
 
 ```clojure
 ;; Doctrine DBAL
-(php/-> conn (fetchAssociative "SELECT ..." (php/array id)))
+(.fetchAssociative conn "SELECT ..." (php/array id))
 
 ;; Symfony Messenger (assume injected under :attributes)
-(php/-> (get-in req [:attributes :bus]) (dispatch (php/new App\Message\SendEmail to subject)))
+(.dispatch (get-in req [:attributes :bus]) (App.Message.SendEmail. to subject))
 
 ;; any PSR-15 handler, Symfony EventDispatcher, Doctrine ORM, Twig — all callable
 ```
@@ -321,7 +321,7 @@ A: See [`docs/MIGRATION.md`](docs/MIGRATION.md). Short version: PHP class stays 
 A: PHPStorm: install the [Phel plugin](https://plugins.jetbrains.com/plugin/19710-phel). VS Code: the [Phel extension](https://marketplace.visualstudio.com/items?itemName=phel-lang.phel) gives syntax + paren matching. REPL is your real "language server" — it answers questions PHPStan can't.
 
 **Q: Can I use Doctrine ORM, Twig, Messenger, etc.?**
-A: Yes — call them via `(php/-> ...)` from a boundary namespace (see [Use full PHP ecosystem from Phel](#use-full-php-ecosystem-from-phel)). Keep handlers pure; pass the services in under `:attributes` via `app.system/build`.
+A: Yes — call them via `(.method obj ...)` from a boundary namespace (see [Use full PHP ecosystem from Phel](#use-full-php-ecosystem-from-phel)). Keep handlers pure; pass the services in under `:attributes` via `app.system/build`.
 
 **Q: What about types / static analysis?**
 A: Phel has runtime type predicates (`number?`, `string?`, `map?`, ...). For static analysis the demo relies on PHPStan/Psalm only on the PHP side. The Phel side is covered by REPL + tests as data.

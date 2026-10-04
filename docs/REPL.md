@@ -70,8 +70,7 @@ app.main/app
 ## Hit the real database
 
 ```clojure
-(use 'doctrine\\DBAL\\DriverManager)
-(def conn (php/:: Doctrine\DBAL\DriverManager getConnection
+(def conn (Doctrine.DBAL.DriverManager/getConnection
             (php-associative-array
               "driver" "pdo_sqlite"
               "path"   "var/data.sqlite")))
@@ -91,7 +90,7 @@ app.main/app
 - **Reload is cheap.** Whenever you save a `.phel` file, `(require 'app.handlers :reload)` picks it up. No `cache:clear`.
 - **`pp` for pretty-print.** `(pp (db/all-users conn))` for readable map output.
 - **`doc` for help.** `(doc get-in)` shows usage and arity.
-- **History is local.** REPL writes `~/.phel_repl_history`. Up-arrow recalls last expression.
+- **History is local.** REPL writes `.phel/repl-history` in the project root (gitignored). Up-arrow recalls last expression.
 - **Multi-line expressions.** Open paren counter at the prompt; press enter when balanced.
 
 ## Common pitfalls

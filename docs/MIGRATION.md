@@ -72,10 +72,10 @@ Update `PhelApp.php` to pass the new deps, and `config/services.yaml` to inject 
   (let [repo   (get-in req [:attributes :order-repo])
         logger (get-in req [:attributes :logger])
         id     (php/intval (get-in req [:attributes :match :path-params :id]))
-        _      (php/-> logger (info "show order" (php-associative-array "id" id)))
-        order  (php/-> repo (find id))]
+        _      (.info logger "show order" (php-associative-array "id" id))
+        order  (.find repo id)]
     (if order
-      {:status 200 :body (php/-> order (toArray))}
+      {:status 200 :body (.toArray order)}
       {:status 404 :body {:error "not found"}})))
 ```
 
@@ -86,8 +86,8 @@ Better — push the PHP interop into a boundary namespace:
 (ns app.orders)
 
 (defn find-by-id [repo id]
-  (if-let [order (php/-> repo (find id))]
-    {:tag :ok :order (php/-> order (toArray))}
+  (if-let [order (.find repo id)]
+    {:tag :ok :order (.toArray order)}
     {:tag :not-found}))
 ```
 
