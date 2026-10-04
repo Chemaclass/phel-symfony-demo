@@ -21,7 +21,7 @@
                    (let [field (first pair)
                          rules (second pair)
                          err   (field-error field rules (get data field))]
-                     (if err (put acc field err) acc)))
+                     (if err (assoc acc field err) acc)))
                  {}
                  (pairs schema))]
     (if (empty? errors)

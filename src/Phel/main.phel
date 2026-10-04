@@ -6,14 +6,14 @@
 (defn- wrap-json-response [handler request]
   (let [resp (handler request)]
     (-> resp
-        (put :headers (merge (or (get resp :headers) {})
-                             {"content-type" "application/json"})))))
+        (assoc :headers (merge (or (get resp :headers) {})
+                               {"content-type" "application/json"})))))
 
 (defn- wrap-errors [handler request]
   (try
     (handler request)
-    (catch \Throwable e
-      {:status 500 :body {:error (php/-> e (getMessage))}})))
+    (catch Throwable e
+      {:status 500 :body {:error (.getMessage e)}})))
 
 (def app
   (r/handler

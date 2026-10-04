@@ -27,8 +27,8 @@ Minimal real Symfony app whose application layer is written in [Phel](https://ph
 
 | Component | Version | Why |
 |---|---|---|
-| PHP        | `>=8.4`        | matches Phel's minimum |
-| Phel       | `^0.38`        | latest stable |
+| PHP        | `>=8.5`        | matches Phel's minimum |
+| Phel       | `^0.54`        | latest stable |
 | Symfony    | `7.4.*` (LTS)  | 3-year support window |
 | Doctrine DBAL | `^4`        | DB without an ORM |
 | PHPUnit    | `^13`          | feature tests |
